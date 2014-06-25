@@ -21,11 +21,11 @@ class Serial_Matrix():
 
 		
 
-		self.r = {0:1,1:0,2:0,3:0,4:0,5:0,6:0,7:0}
-		self.g = {0:1,1:1,2:0,3:0,4:0,5:0,6:0,7:0}
-		self.b = {0:1,1:1,2:0,3:0,4:0,5:0,6:0,7:0}
+		self.r = {0:1,1:1,2:1,3:1,4:1,5:1,6:1,7:1}
+		self.g = {0:1,1:1,2:1,3:1,4:1,5:1,6:1,7:1}
+		self.b = {0:1,1:1,2:1,3:1,4:1,5:1,6:1,7:1}
 
-		self.matriz = {0:self.r, 1:self.g, 2:self.b,3:1};
+		self.matriz = {0:self.r, 1:self.g, 2:self.b,3:1}
 		
 		#letters definition
 
@@ -72,8 +72,8 @@ class Serial_Matrix():
 
 		self.symbol={
 		'email':{0:{0:0b00000000 ,1:0 ,2:0 ,3:0 ,4:0 ,5:0 ,6:0 ,7:0},
-				 1:{0:0xFF ,1:0b01000000 ,2:0b00100000 ,3:0b00010000 ,4:0b00010000 ,5:0b00100000 ,6:0b01000000 ,7:0xFF},
-				 2:{0:0xFF,1:0b01000000 ,2:0b00100000 ,3:0b00010000 ,4:0b00010000 ,5:0b00100000 ,6:0b01000000 ,7:0xFF},
+				 1:{0:0xFF ,1:0b01000001 ,2:0b00100001 ,3:0b00010001 ,4:0b00010001 ,5:0b00100001 ,6:0b01000001 ,7:0xFF},
+				 2:{0:0xFF,1:0b01000001 ,2:0b00100001 ,3:0b00010001 ,4:0b00010001 ,5:0b00100001 ,6:0b01000001 ,7:0xFF},
 				 3:1
 				 }
 
@@ -84,13 +84,14 @@ class Serial_Matrix():
 		self.stringpointer = 0
 		self.string_write = True
 		self.string_end = False
+
 		#self.letter =  {'A':{0:0x7F,1:0x0,2:0x0,3:0,4:0x0,5:0,6:0,7:0}}
 
 		self.shift=13
 		self.anti_shift=3
 		#time control vars
 		self.tempo=0
-		self.elapsedtime=self.t = timeit.default_timer()
+		self.elapsedtime= timeit.default_timer()
 
 
 		self.ser = serial.Serial()
@@ -100,10 +101,13 @@ class Serial_Matrix():
 		self.ser.stopbits = serial.STOPBITS_ONE #number of stop bits		
 		self.ser.timeout  = 0.5
 
-		self.ser.port = "/dev/ttyUSB4"
+		self.ser.port = "/dev/ttyUSB0"
 
 		self.ser.open()
 		self.data_send = Queue.Queue()
+		self.TurnAllOff(0)
+		self.TurnAllOff(1)
+		self.TurnAllOff(2)
 		self.SerialThread_call()
 
 	def Symbol(self, symbol):
@@ -111,6 +115,22 @@ class Serial_Matrix():
 
 		self.data_send.put(self.matriz)
 
+	def matrix_print(self, string, cor):
+		self.TurnAllOff(0)
+		self.TurnAllOff(1)
+		self.TurnAllOff(2)
+		
+
+		self.string = string
+		self.TurnAllOff(cor)
+		if self.string[len(self.string)-1] != ' ':
+			self.string = self.string + ' '
+
+		self.stringpointer = 0
+		self.string_write = True
+		while self.string_write == True:
+			self.ProcessData(cor)
+			time.sleep(0.01)
 
 
 	def TurnAllOff(self, var):
@@ -119,38 +139,39 @@ class Serial_Matrix():
 	def TurnAllOn(self, var):
 		self.matriz [var] = dict(map(lambda (k,v): (k,0), self.matriz[var].iteritems()))
 
-	def turn90(self):
-		aux_matrix = self.matriz
-		for n in range (0,3):
-			for j in range (8,0):
-				for i in range (0,8):
-					deleter = 0
-					deleter = (1<<i)
-					xpto = (self.matriz[n][j] & deleter) 
-					if xpto>0:
-						aux_matrix[n][j] = ((aux_matrix[n][j]<<1)+1)
-					else:
-						aux_matrix[n][j] = (aux_matrix[n][j]<<1) 
+	# def turn90(self):
+	# 	aux_matrix = self.matriz
+	# 	for n in range (0,3):
+	# 		for j in range (8,0):
+	# 			for i in range (0,8):
+	# 				deleter = 0
+	# 				deleter = (1<<i)
+	# 				xpto = (self.matriz[n][j] & deleter) 
+	# 				if xpto>0:
+	# 					aux_matrix[n][j] = ((aux_matrix[n][j]<<1)+1)
+	# 				else:
+	# 					aux_matrix[n][j] = (aux_matrix[n][j]<<1) 
 
 
 
 		#for k in range(0,3):
 		#	for h in range (0,8):
 		#		aux_matrix[k][h] = aux_matrix[k][h] & 0xff 
-		self.matriz[1][1] = 10
+		# self.matriz[1][1] = 10
 		
-		self.matriz = aux_matrix
+		# self.matriz = aux_matrix
 
 
 
 
 
-	def ProcessData(self):
+	def ProcessData(self, cor):
 		self.elapsedtime = timeit.default_timer()-self.tempo
-		if self.elapsedtime > 0.25:
+		if self.elapsedtime > 0.10:
 			self.tempo = timeit.default_timer()
 			self.TurnAllOff(1)
 			self.TurnAllOff(0)
+			self.TurnAllOff(2)
 			#self.matriz[1] = self.letter['A']
 			if self.shift == -6:
 				self.shift = 13
@@ -169,17 +190,16 @@ class Serial_Matrix():
 
 			#print self.string_write
 			if self.string_write == True:
-				self.letterwrite(2,self.string[self.stringpointer],self.string[self.stringpointer+1],self.shift)
+				self.letterwrite(cor,self.string[self.stringpointer],self.string[self.stringpointer+1],self.shift)
 			else:
 				self.stringpointer = 0
-				self.string_write = True
+				
 
 			#self.letterwrite(1,'A','A',self.shift)
 
 
 	def letterwrite(self, cor, letter1,letter2, shift):
-		self.TurnAllOff(1)
-		self.TurnAllOff(2)
+
 		aux_final = self.letter[letter1]
 		#aux_final1 = self.letter['B']
 
@@ -227,8 +247,8 @@ class Serial_Matrix():
 				for key in range(0,8):
 					self.matriz[cor][key+first_shift] = aux_final[key]^255		
 
-		self.TurnAllOn(0)
-		self.turn90()
+		#self.TurnAllOn(0)
+		#self.turn90()
 		self.data_send.put(self.matriz)
 
 	
@@ -237,12 +257,9 @@ class Serial_Matrix():
 		self.t = Thread(target=self.SerialThread)
 		self.t.start()		
 	
-	def SIGINT_handler(self):
-		sys.exit(0)
-	
 
 	def SerialThread(self):
-		self.ser.write(chr(1))
+		self.ser.write(chr(2))
 		
 		while self.matriz[3]==1:
 			try:
